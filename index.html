@@ -569,6 +569,22 @@
     const continuousListeningCheckbox = document.getElementById('continuous-listening');
     const voiceOptions = document.querySelectorAll('.voice-option');
     
+    // Handle local time and date functions
+    function getLocalTimeAndDate() {
+      const now = new Date();
+      
+      // Time functions that should be handled locally
+      const timeResponse = `The current time is ${now.toLocaleTimeString()}.`;
+      const dateResponse = `Today is ${now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.`;
+      
+      return { timeResponse, dateResponse };
+    }
+    
+    // Add conversation history tracking
+    let conversationHistory = [
+      { role: "system", content: "You are a helpful voice assistant. The user is talking to you through voice. You are aware this is a voice conversation. Keep responses concise and conversational." }
+    ];
+    
     // Initialize app
     function init() {
       // Setup Speech Recognition
@@ -590,6 +606,9 @@
       
       // Hide audio wave
       audioWave.style.display = 'none';
+      
+      // Check browser compatibility
+      checkBrowserCompatibility();
     }
     
     // Setup Speech Recognition
@@ -905,80 +924,14 @@
               default:
                 response = "Hello! How can I help you today?";
             }
+          } else {
+            response = "I understand you said: " + userInput + ". How can I help you with that?";
           }
-    // Handle local time and date functions
-    function getLocalTimeAndDate() {
-      const now = new Date();
-      
-      // Time functions that should be handled locally
-      const timeResponse = `The current time is ${now.toLocaleTimeString()}.`;
-      const dateResponse = `Today is ${now.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.`;
-      
-      return { timeResponse, dateResponse };
-    }
-    
-    // Add conversation history tracking
-    let conversationHistory = [
-      { role: "system", content: "You are a helpful voice assistant. The user is talking to you through voice. You are aware this is a voice conversation. Keep responses concise and conversational." }
-    ];
-    
-    // Update callDeepSeekAPI to use conversation history
-    async function callDeepSeekAPI(userInput) {
-      // Replace with your actual DeepSeek API key
-      const DEEPSEEK_API_KEY = "sk-409f102ba8234fa1864d04294ce1bed2";
-      
-      // Check for local commands first
-      const { timeResponse, dateResponse } = getLocalTimeAndDate();
-      
-      // Handle time and date queries locally for faster response
-      if (userInput.toLowerCase().includes("what time") || userInput.toLowerCase().includes("current time")) {
-        return timeResponse;
-      }
-      
-      if (userInput.toLowerCase().includes("what date") || userInput.toLowerCase().includes("what day") || 
-          userInput.toLowerCase().includes("today's date")) {
-        return dateResponse;
-      }
-      
-      // Add user message to history
-      conversationHistory.push({ role: "user", content: userInput });
-      
-      // Keep conversation history to a reasonable size
-      if (conversationHistory.length > 10) {
-        // Keep the system message and the 9 most recent messages
-        conversationHistory = [
-          conversationHistory[0],
-          ...conversationHistory.slice(conversationHistory.length - 9)
-        ];
-      }
-      
-      const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${DEEPSEEK_API_KEY}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model: "deepseek-chat",
-          messages: conversationHistory,
-          temperature: 0.7,
-          max_tokens: 150
-        })
+          
+          resolve(response);
+        }, delay);
       });
-      
-      if (!response.ok) {
-        throw new Error(`API request failed with status ${response.status}`);
-      }
-      
-      const data = await response.json();
-      const aiMessage = data.choices[0].message.content;
-      
-      // Add AI response to conversation history
-      conversationHistory.push({ role: "assistant", content: aiMessage });
-      
-      return aiMessage;
     }
-
     
     // Start session timer
     function startSessionTimer() {
@@ -995,7 +948,7 @@
       sessionTimeDisplay.textContent = `${minutes}:${seconds}`;
     }
 
-    // Initialize the app
+    // Initialize the app when DOM is loaded
     document.addEventListener('DOMContentLoaded', init);
     
     // Generate random wave heights for audio visualization
@@ -1052,9 +1005,6 @@
         document.querySelector('.container').insertBefore(warningDiv, document.querySelector('.status-bar'));
       }
     }
-    
-    // Check browser compatibility on load
-    checkBrowserCompatibility();
   </script>
 </body>
 </html>
